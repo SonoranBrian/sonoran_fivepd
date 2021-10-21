@@ -1,0 +1,71 @@
+--[[
+    Sonaran CAD Plugins
+    Plugin Name: fivepd
+    Creator: SonoranCAD
+    Description: Callouts and Record Sync with FivePD
+]]
+
+CreateThread(function()
+    Config.LoadPlugin("fivepd", function(pluginConfig)
+        if pluginConfig.enabled then
+
+            registerApiType("NEW_DISPATCH", "emergency")
+
+            -- New Callout Handler
+            function CreateNewCallout(src, callName, callDesc, callResponse, callLocation)
+                local identifier = GetIdentifiers(src)[Config.primaryIdentifier]
+                local units = {identifier}
+                local notes = ""
+                local postal = ""
+                local notesStr = ""
+
+                local data = {
+                    ['serverId'] = Config.serverId,
+                    ['origin'] = pluginConfig.origin,
+                    ['status'] = pluginConfig.status,
+                    ['priority'] = callResponse,
+                    ['block'] = "", -- not used, but required
+                    ['postal'] = postal, -- TODO
+                    ['address'] = callLocation ~= nil and callLocation or 'Unknown',
+                    ['title'] = callName,
+                    ['code'] = pluginConfig.code, -- TODO
+                    ['description'] = callDesc,
+                    ['units'] = units,
+                    ['notes'] = {notesStr} -- required
+                }
+
+                debugLog("Sending New Callout")
+                performApiRequest({data}, 'NEW_DISPATCH', function() end)
+            end
+
+            RegisterServerEvent("SonoranCAD::fivepd:CalloutReceived", function(src, callIdent, callId, callName, callDesc, callResponse, callLocX, callLocY, callLocZ)
+                -- This Event doesn't seem to trigger so I didn't use it.
+            end)
+            RegisterServerEvent("SonoranCAD::fivepd:CalloutAccepted", function(src, callIdent, callId, callName, callDesc, callResponse, callLocation)
+                CreateNewCallout(src, callName, callDesc, callResponse, callLocation)
+            end)
+            RegisterServerEvent("SonoranCAD::fivepd:CalloutCompleted", function(src, callIdent, callId, callName, callDesc, callResponse, callLocX, callLocY, callLocZ)
+                print(src .. " completed callout: " .. json.encode(callout))
+
+            end)
+            RegisterServerEvent("SonoranCAD::fivepd:DutyStatusChange", function(src, onDuty)
+                print(src .. " is on duty: " .. tostring(onDuty))
+
+            end)
+            RegisterServerEvent("SonoranCAD::fivepd:ServiceCalled", function(src, service)
+                print(src .. " called for: " .. tostring(service))
+
+            end)
+            RegisterServerEvent("SonoranCAD::fivepd:RankChanged", function(src, rank)
+                print(src .. " is now rank: " .. tostring(rank))
+
+            end)
+            RegisterServerEvent("SonoranCAD::fivepd:PedArrested", function(src, pedData)
+                print(src .. " arrested ped: " .. tostring(pedData.FirstName) .. " " .. tostring(pedData.LastName))
+
+            end)
+
+        end
+
+    end)
+end)
